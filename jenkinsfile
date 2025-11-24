@@ -18,7 +18,7 @@ pipeline {
                         sonar-scanner \
                         -Dsonar.projectKey=netflix \
                         -Dsonar.sources=. \
-                        -Dsonar.host.url=http://54.158.205.65:9000 \
+                        -Dsonar.host.url=http://3.84.96.155:8080 \
                         -Dsonar.login=squ_1580b0d9fb434293b9aed629004f53189aa2ed89
                     '''
                 }
@@ -73,4 +73,12 @@ pipeline {
             }
         }
     }
+stage('k8s deployment'){
+    steps{
+        withKubeConfig(credentialsId: 'k8s') {
+        sh 'kubectl apply -f deployment.yml'
+        sh 'kubectl apply -f service.yml'
+     }
+  }
+ }
 }
