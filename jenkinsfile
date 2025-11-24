@@ -1,40 +1,36 @@
 pipeline {
     agent any
 
-    environment {
-        DOCKERHUB = "dockerhub"
-        IMAGE = "rakesh2398/netflix"
-        GIT_REPO = "netflix-e2e"
-        GIT_USER = "rakeshkumar2398"
-    }
-
     stages {
 
         stage('Git Checkout') {
             steps {
                 git branch: 'main',
-                url: 'https://github.com/rakeshkumar2398/netflix-e2e.git'
+                    url: 'https://github.com/rakeshkumar2398/netflix-e2e.git'
             }
         }
 
-        stage('SonarQube Analysis') {
+        stage('SonarQube Scan') {
             steps {
                 echo '🔍 Running SonarQube Code Analysis...'
                 withSonarQubeEnv('sonar-server') {
-                    sh """
-                        $SCANNER_HOME/bin/sonar-scanner \
+                    sh '''
+                        sonar-scanner \
                         -Dsonar.projectKey=netflix \
-                        -Dsonar.projectName=netflix \
-                        -Dsonar.sources=./ \
-                        -Dsonar.host.url=http://54.158.205.65:9000
-                    """
+                        -Dsonar.sources=. \
+                        -Dsonar.host.url=http://54.158.205.65:9000 \
+                        -Dsonar.login=squ_1580b0d9fb434293b9aed629004f53189aa2ed89
+                    '''
                 }
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh 'cd Application && docker build -t rakesh2398/netflix:${BUILD_NUMBER} .'
+                script {
+                    echo 'Building Docker Image'
+                    sh 'docker build -t rakesh2398/netflix:${BUILD_NUMBER} .'
+                }
             }
         }
 
@@ -46,26 +42,32 @@ pipeline {
 
         stage('Push Image to DockerHub') {
             steps {
-                withCredentials([string(credentialsId: 'dockerhub', variable: 'TOKEN')]) {
-                    sh 'echo "${TOKEN}" | docker login -u rakesh2398 --password-stdin'
+                script {
+                    withCredentials([string(credentialsId: 'dockerhub', variable: 'dockerhub')]) {
+                        sh 'echo "${dockerhub}" | docker login -u rakesh2398 --password-stdin'
+                    }
+                    sh 'docker push rakesh2398/netflix:${BUILD_NUMBER}'
                 }
-                sh 'docker push rakesh2398/netflix:${BUILD_NUMBER}'
             }
         }
 
         stage('Update Kubernetes Deployment Manifest File') {
+            environment {
+                GIT_REPO_NAME = "netflix-e2e"
+                GIT_USER_NAME = "rakeshkumar2398"
+            }
             steps {
                 withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-
                     sh '''
                         git config user.email "rakesh@gmail.com"
                         git config user.name "rakesh"
 
-                        sed -i "s#image:.*#image: rakesh2398/netflix:${BUILD_NUMBER}#g" Ansible/k8s_deployment.yaml
+                        # update docker tag inside deployment.yaml
+                        sed -i "s#image:.*#image:rakesh2398/netflix:${BUILD_NUMBER}#g" Kubernetes/deployment.yaml
 
                         git add .
                         git commit -m "Update deployment image tag to version ${BUILD_NUMBER}"
-                        git push https://${GITHUB_TOKEN}@github.com/${GIT_USER}/${GIT_REPO}.git HEAD:main
+                        git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
                     '''
                 }
             }
