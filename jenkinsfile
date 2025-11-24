@@ -1,0 +1,47 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKERHUB = "dockerhub"
+        IMAGE = "rakesh2398-dockeruserame/netflix-clone"
+    }
+
+    stages {
+
+        stage('Clean Workspace') { steps { cleanWs() } }
+
+        stage('Git Checkout') {
+            steps {
+                git branch: 'main',
+                url: 'https://github.com/devopscloudlabs/Netflix-clone'
+            }
+        }
+
+        stage('Trivy FS Scan') { steps { sh "trivy fs ." } }
+
+        stage('Docker Build') {
+            steps {
+                sh "docker build -t ${IMAGE}:latest ."
+            }
+        }
+
+        stage('Docker Push') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: "${DOCKERHUB}", usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                    sh 'docker login -u $USER -p $PASS'
+                }
+                sh 'docker push ${IMAGE}:latest'
+            }
+        }
+
+        stage('Deploy to EKS') {
+            steps {
+                sh """
+                    aws eks update-kubeconfig --name netflix-eks --region us-east-1
+                    kubectl apply -f Kubernetes/deployment.yaml
+                    kubectl apply -f Kubernetes/service.yaml
+                """
+            }
+        }
+    }
+}
