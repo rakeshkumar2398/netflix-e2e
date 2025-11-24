@@ -116,17 +116,17 @@ resource "aws_instance" "netflix" {
   provisioner "remote-exec" {
     inline = [
       "sudo yum update -y",
-      "sudo yum install -y wget git docker unzip",
+      "sudo yum install wget git maven ansible docker -y",
       "sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo",
       "sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key",
-      "sudo yum install -y jenkins",
+      "sudo yum install jenkins -y",
       "sudo systemctl enable jenkins && sudo systemctl start jenkins",
       "sudo systemctl enable docker && sudo systemctl start docker",
       "sudo usermod -aG docker ec2-user",
       "sudo usermod -aG docker jenkins",
       "sudo chmod 666 /var/run/docker.sock",
-      "sudo docker run -d --name sonar -p 9000:9000 sonarqube:lts-community",
-      "sudo rpm -ivh https://github.com/aquasecurity/trivy/releases/download/v0.18.3/trivy_0.18.3_Linux-64bit.rpm || true",
+      "sudo docker run -d --name sonar -p 9000:9000 sonarqube",
+      "sudo rpm -ivh https://github.com/aquasecurity/trivy/releases/download/v0.18.3/trivy_0.18.3_Linux-64bit.rpm",
 
       # ---------- Install kubectl ----------
       "curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl",
@@ -142,4 +142,3 @@ resource "aws_instance" "netflix" {
 
   tags = { Name = "Netflix-Server" }
 }
-
