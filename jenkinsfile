@@ -3,44 +3,71 @@ pipeline {
 
     environment {
         DOCKERHUB = "dockerhub"
-        IMAGE = "rakesh2398-dockeruserame/netflix-clone"
+        IMAGE = "rakesh2398/netflix"
+        GIT_REPO = "netflix-e2e"
+        GIT_USER = "rakeshkumar2398"
     }
 
     stages {
 
-        stage('Clean Workspace') { steps { cleanWs() } }
-
         stage('Git Checkout') {
             steps {
                 git branch: 'main',
-                url: 'https://github.com/devopscloudlabs/Netflix-clone'
+                url: 'https://github.com/rakeshkumar2398/netflix-e2e.git'
             }
         }
 
-        stage('Trivy FS Scan') { steps { sh "trivy fs ." } }
-
-        stage('Docker Build') {
+        stage('SonarQube Analysis') {
             steps {
-                sh "docker build -t ${IMAGE}:latest ."
-            }
-        }
-
-        stage('Docker Push') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: "${DOCKERHUB}", usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                    sh 'docker login -u $USER -p $PASS'
+                echo '🔍 Running SonarQube Code Analysis...'
+                withSonarQubeEnv('sonar-server') {
+                    sh """
+                        $SCANNER_HOME/bin/sonar-scanner \
+                        -Dsonar.projectKey=netflix \
+                        -Dsonar.projectName=netflix \
+                        -Dsonar.sources=./ \
+                        -Dsonar.host.url=http://54.158.205.65:9000
+                    """
                 }
-                sh 'docker push ${IMAGE}:latest'
             }
         }
 
-        stage('Deploy to EKS') {
+        stage('Build Docker Image') {
             steps {
-                sh """
-                    aws eks update-kubeconfig --name netflix-eks --region us-east-1
-                    kubectl apply -f Kubernetes/deployment.yaml
-                    kubectl apply -f Kubernetes/service.yaml
-                """
+                sh 'cd Application && docker build -t rakesh2398/netflix:${BUILD_NUMBER} .'
+            }
+        }
+
+        stage('Docker Image Scan') {
+            steps {
+                sh 'trivy image rakesh2398/netflix:${BUILD_NUMBER}'
+            }
+        }
+
+        stage('Push Image to DockerHub') {
+            steps {
+                withCredentials([string(credentialsId: 'dockerhub', variable: 'TOKEN')]) {
+                    sh 'echo "${TOKEN}" | docker login -u rakesh2398 --password-stdin'
+                }
+                sh 'docker push rakesh2398/netflix:${BUILD_NUMBER}'
+            }
+        }
+
+        stage('Update Kubernetes Deployment Manifest File') {
+            steps {
+                withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
+
+                    sh '''
+                        git config user.email "rakesh@gmail.com"
+                        git config user.name "rakesh"
+
+                        sed -i "s#image:.*#image: rakesh2398/netflix:${BUILD_NUMBER}#g" Ansible/k8s_deployment.yaml
+
+                        git add .
+                        git commit -m "Update deployment image tag to version ${BUILD_NUMBER}"
+                        git push https://${GITHUB_TOKEN}@github.com/${GIT_USER}/${GIT_REPO}.git HEAD:main
+                    '''
+                }
             }
         }
     }
