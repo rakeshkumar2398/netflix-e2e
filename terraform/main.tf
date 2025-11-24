@@ -100,7 +100,7 @@ resource "aws_security_group" "netflix_sg" {
 
 # ------------------------- EC2 INSTANCE -------------------------
 resource "aws_instance" "netflix" {
-  ami                    = "ami-0f00d706c4a80fd93"  # Amazon Linux 2 AMI (us-east-1)
+  ami                    = "ami-0fa3fe0fa7920f68e"  # Amazon Linux 2 AMI (us-east-1)
   instance_type          = "t2.xlarge"
   subnet_id              = aws_subnet.public_subnet.id
   key_name               = aws_key_pair.key_pair.key_name
@@ -142,3 +142,4 @@ resource "aws_instance" "netflix" {
 
   tags = { Name = "Netflix-Server" }
 }
+
