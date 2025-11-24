@@ -62,8 +62,7 @@ pipeline {
                         git config user.email "rakesh@gmail.com"
                         git config user.name "rakesh"
 
-                        # update docker tag inside deployment.yaml
-                        sed -i "s#image:.*#image:rakesh2398/netflix:${BUILD_NUMBER}#g" Kubernetes/deployment.yaml
+                        sed -i "s#image:.*#image: rakesh2398/netflix:${BUILD_NUMBER}#g" Kubernetes/deployment.yaml
 
                         git add .
                         git commit -m "Update deployment image tag to version ${BUILD_NUMBER}"
@@ -72,13 +71,15 @@ pipeline {
                 }
             }
         }
-    }
-stage('k8s deployment'){
-    steps{
-        withKubeConfig(credentialsId: 'k8s') {
-        sh 'kubectl apply -f deployment.yml'
-        sh 'kubectl apply -f service.yml'
-     }
-  }
- }
-}
+
+        stage('k8s deployment') {
+            steps {
+                withKubeConfig(credentialsId: 'k8s') {
+                    sh 'kubectl apply -f Kubernetes/deployment.yaml'
+                    sh 'kubectl apply -f Kubernetes/service.yaml'
+                }
+            }
+        }
+
+    } // end of stages
+} // end of pipeline
