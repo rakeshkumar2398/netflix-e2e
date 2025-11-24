@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: netflix-container
-        image: rakesh2398/netflix:5
+        image: rakesh2398/netflix:6
         ports:
         - containerPort: 80
 
