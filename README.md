@@ -1,27 +1,16 @@
-✅ Terraform → 1 Amazon Linux EC2
-
+✅ Terraform 
+→ 1 Amazon Linux EC2
 This single EC2 will run:
-
 Jenkins
-
 Docker
-
 Trivy
-
 SonarQube
-
 kubectl
-
 awscli
-
 eksctl
-
 Terraform (optional)
-
 Build Docker images → push to DockerHub
-
 Deploy to EKS
-
 Terraform
    ↓
 1 EC2 (Amazon Linux)
@@ -36,9 +25,6 @@ Terraform
 EKS Cluster
    ↓
 Netflix Deployment + LoadBalancer
-
-
-
 terraform file has 
 jenkins,sonarqube,trivy,eksctl,kubectlinstallation
 # ------------------------- KEY PAIR -------------------------
@@ -185,3 +171,4 @@ resource "aws_instance" "netflix" {
 
   tags = { Name = "Netflix-Server" }
 }
+
